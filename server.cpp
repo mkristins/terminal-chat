@@ -202,6 +202,20 @@ public:
         }
         return "Lobby not found";
     }
+
+    int send_message_to_user(int memberId, std::string message)
+    {
+        for (auto &m : memberList)
+        {
+            if (m.id == memberId)
+            {
+                std::string new_message = "\n" + message + "\n>";
+                send(m.socketFd, message.c_str(), message.size(), 0);
+                return 1;
+            }
+        }
+        return 0;
+    }
 };
 
 const std::string opening =
@@ -363,11 +377,13 @@ void talk_to_client(int client_fd, Manager &manager)
             }
             else if (message.command_type == CommandType::PrivateMessage)
             {
+                std::cout << "Private Message\n";
                 if (message.args.size() == 2)
                 {
                     std::string userIdStr = message.args[0];
-                    int userId = parse_string_int(userIdStr);
+                    int targetUser = parse_string_int(userIdStr);
                     std::string textMessage = message.args[1];
+                    manager.send_message_to_user(targetUser, textMessage);
                 }
             }
             text += ">";
