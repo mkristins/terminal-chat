@@ -12,13 +12,16 @@ The messages are in format <MESSAGE_TYPE>|<MESSAGE_CONTENT>
 */
 enum CommandType
 {
+    HelpCommand,
     ListLobbies,
     ListUsers,
+    ConnectCommand,
     CreateLobby,
     JoinLobby,
     LeaveLobby,
     PrivateMessage,
     TextMessage,
+    QuitCommand,
     Unknown,
     UnknownCommand
 };

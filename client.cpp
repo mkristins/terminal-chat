@@ -8,7 +8,7 @@
 
 int main(int argc, char *argv[])
 {
-    std::cout << "Hello, client!\n";
+    std::cout << "Terminal-chat client\n";
     addrinfo hints;
     addrinfo *result;
 
@@ -49,9 +49,8 @@ int main(int argc, char *argv[])
         }
     }
     int conn_fd = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
-    std::cout << conn_fd << "\n";
-
     connect(conn_fd, result->ai_addr, result->ai_addrlen);
+
     close(conn_fd);
     freeaddrinfo(result);
     return 0;

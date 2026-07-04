@@ -14,6 +14,11 @@
 
 #define MEMBER_LIMIT 100
 
+enum ErrorCode
+{
+    Ok
+};
+
 std::string to_str(int x)
 {
     std::string result;
@@ -30,10 +35,11 @@ class Member
 {
 public:
     int id;
-    const char *name;
+    std::string name;
     int lobbyId;
+    int socketFd;
 
-    Member(const char *name) : name(name), lobbyId(0) {}
+    Member(std::string name, int memberId, int socketFd) : id(memberId), socketFd(socketFd), name(name), lobbyId(-1) {}
 };
 
 class Lobby
@@ -41,11 +47,11 @@ class Lobby
 
 public:
     int id;
-    const char *name;
+    std::string name;
     std::vector<int> memberIds;
     int capacity;
-    Lobby(int id, const char *name) : id(id), name(name), capacity(10) {}
-    Lobby(int id, const char *name, int cap) : id(id), name(name), capacity(cap) {}
+    Lobby(int id, std::string name) : id(id), name(name), capacity(10) {}
+    Lobby(int id, std::string name, int cap) : id(id), name(name), capacity(cap) {}
 };
 
 class Manager
@@ -62,33 +68,29 @@ public:
     {
     }
 
-    int add_new_member(const char *name)
+    int add_new_member(const char *name, int socketFd)
     {
-        mutex.lock();
+        std::lock_guard<std::mutex> lock(mutex);
         int currentId = nextMemberId;
         nextMemberId++;
 
-        memberList.push_back(Member(name));
-        mutex.unlock();
-
+        memberList.push_back(Member(name, currentId, socketFd));
         return currentId;
     }
 
     int add_new_lobby(const char *name)
     {
-        mutex.lock();
+        std::lock_guard<std::mutex> lock(mutex);
         int currentId = nextLobbyId;
         nextLobbyId++;
 
         lobbyList.push_back(Lobby(currentId, name));
-
-        mutex.unlock();
         return currentId;
     }
 
     std::string produce_lobby_list()
     {
-        mutex.lock();
+        std::lock_guard<std::mutex> lock(mutex);
         std::string lobby_list;
         for (auto &m : lobbyList)
         {
@@ -97,13 +99,12 @@ public:
             lobby_list += " " + to_str(m.memberIds.size()) + "/" + to_str(m.capacity);
             lobby_list += "\n";
         }
-        mutex.unlock();
         return lobby_list;
     }
 
     std::string produce_user_list()
     {
-        mutex.lock();
+        std::lock_guard<std::mutex> lock(mutex);
         std::string user_list;
         for (auto &m : memberList)
         {
@@ -111,12 +112,12 @@ public:
             user_list += m.name;
             user_list += "\n";
         }
-        mutex.unlock();
         return user_list;
     }
 
     int add_member_to_lobby(int memberId, int lobbyId)
     {
+        std::lock_guard<std::mutex> lock(mutex);
         for (auto &m : lobbyList)
         {
             if (m.id == lobbyId)
@@ -134,7 +135,7 @@ public:
 };
 
 const std::string opening =
-    R"(Welcome to ChatServer!
+    R"(Welcome to TerminalChat!
 Commands:
   /help             Show available commands
   /list             List all lobbies
@@ -178,7 +179,7 @@ void talk_to_client(int client_fd, Manager &manager)
                 name += buffer[x];
             }
 
-            userId = manager.add_new_member(name.c_str());
+            userId = manager.add_new_member(name.c_str(), client_fd);
             text += name + "\n" + ">";
             state = WaitMessage;
         }
