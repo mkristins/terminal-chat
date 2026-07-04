@@ -62,6 +62,19 @@ class Manager
     std::vector<Lobby> lobbyList;
 
     std::mutex mutex;
+    std::string write_user_id(int number)
+    {
+        std::string result;
+        do
+        {
+            int dig = number % 10;
+            char f = char(dig + '0');
+            result += f;
+            number /= 10;
+        } while (number > 0);
+        std::reverse(result.begin(), result.end());
+        return result;
+    }
 
 public:
     Manager() : nextMemberId(0), nextLobbyId(0)
@@ -108,10 +121,10 @@ public:
         std::string user_list;
         for (auto &m : memberList)
         {
-            user_list += "# ";
-            user_list += m.name;
-            user_list += "\n";
+            std::string member_string = "= " + m.name + "#" + write_user_id(m.id) + "\n";
+            user_list += member_string;
         }
+        std::cout << user_list << "?\n";
         return user_list;
     }
 
@@ -152,6 +165,15 @@ enum CommunicationState
     WaitMessage
 };
 
+std::string sanitize_string(std::string str)
+{
+    while (!str.empty() && (str.back() == '\r' || str.back() == '\n' || str.back() == ' '))
+    {
+        str.pop_back();
+    }
+    return str;
+}
+
 void talk_to_client(int client_fd, Manager &manager)
 {
     char buffer[1024];
@@ -178,7 +200,7 @@ void talk_to_client(int client_fd, Manager &manager)
                     break;
                 name += buffer[x];
             }
-
+            name = sanitize_string(name);
             userId = manager.add_new_member(name.c_str(), client_fd);
             text += name + "\n" + ">";
             state = WaitMessage;
