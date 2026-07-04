@@ -174,6 +174,24 @@ std::string sanitize_string(std::string str)
     return str;
 }
 
+int parse_string_int(std::string str)
+{
+    int result = 0;
+    for (char x : str)
+    {
+        if ('0' <= x && x <= '9')
+        {
+            result = 10 * result;
+            result += x - '0';
+            if (result > MEMBER_LIMIT)
+            {
+                return -1;
+            }
+        }
+    }
+    return result;
+}
+
 void talk_to_client(int client_fd, Manager &manager)
 {
     char buffer[1024];
@@ -240,6 +258,14 @@ void talk_to_client(int client_fd, Manager &manager)
             else if (message.command_type == CommandType::LeaveLobby)
             {
                 std::cout << "LeaveLobby\n";
+            }
+            else if (message.command_type == CommandType::PrivateMessage)
+            {
+                if (message.args.size() == 2)
+                {
+                    std::string userIdStr = message.args[0];
+                    int userId = parse_string_int(userIdStr);
+                }
             }
             text += ">";
         }
