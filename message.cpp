@@ -59,7 +59,11 @@ Message::Message(char buffer[])
     {
         if (!args.empty())
         {
-            if (args[0] == "list")
+            if (args[0] == "help")
+            {
+                command_type = CommandType::HelpCommand;
+            }
+            else if (args[0] == "list")
             {
                 command_type = CommandType::ListLobbies;
             }

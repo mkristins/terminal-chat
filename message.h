@@ -15,7 +15,6 @@ enum CommandType
     HelpCommand,
     ListLobbies,
     ListUsers,
-    ConnectCommand,
     CreateLobby,
     JoinLobby,
     LeaveLobby,

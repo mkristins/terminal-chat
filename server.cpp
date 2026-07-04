@@ -40,6 +40,11 @@ public:
     int socketFd;
 
     Member(std::string name, int memberId, int socketFd) : id(memberId), socketFd(socketFd), name(name), lobbyId(-1) {}
+
+    void set_lobby_id(int id)
+    {
+        lobbyId = id;
+    }
 };
 
 class Lobby
@@ -109,6 +114,7 @@ public:
         {
             lobby_list += "# ";
             lobby_list += m.name;
+            lobby_list += "(" + to_str(m.id) + ")";
             lobby_list += " " + to_str(m.memberIds.size()) + "/" + to_str(m.capacity);
             lobby_list += "\n";
         }
@@ -140,10 +146,61 @@ public:
                     return 0;
                 }
                 m.memberIds.push_back(memberId);
+                for (auto &member : memberList)
+                {
+                    if (member.id == memberId)
+                    {
+                        member.set_lobby_id(lobbyId);
+                    }
+                }
                 return 1;
             }
         }
         return 0;
+    }
+
+    int leave_lobby(int memberId)
+    {
+        for (auto &m : memberList)
+        {
+            if (m.lobbyId != -1)
+            {
+                for (auto &l : lobbyList)
+                {
+                    if (l.id == m.lobbyId)
+                    {
+                        int index = -1;
+                        for (int i = 0; i < l.memberIds.size(); i++)
+                        {
+                            if (l.memberIds[i] == memberId)
+                            {
+                                index = i;
+                            }
+                        }
+                        if (index != -1)
+                        {
+                            l.memberIds.erase(l.memberIds.begin() + index);
+                        }
+                        break;
+                    }
+                }
+                m.lobbyId = -1;
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    std::string get_lobby_name(int lobbyId)
+    {
+        for (auto &m : lobbyList)
+        {
+            if (m.id == lobbyId)
+            {
+                return m.name;
+            }
+        }
+        return "Lobby not found";
     }
 };
 
@@ -155,9 +212,19 @@ Commands:
   /users            List all users
   /create [name]    Create a lobby
   /join [lobbyCode] Join a lobby
-  /leave            Leave current lobby
+  /leave            Leave the current lobby
   /pm [userId]      Private message an user
 Enter your username: )";
+
+const std::string command_list =
+    R"(Commands:
+  /help             Show available commands
+  /list             List all lobbies
+  /users            List all users
+  /create [name]    Create a lobby
+  /join [lobbyCode] Join a lobby
+  /leave            Leave the current lobby
+  /pm [userId]      Private message an user)";
 
 enum CommunicationState
 {
@@ -226,6 +293,14 @@ void talk_to_client(int client_fd, Manager &manager)
         else
         {
             Message message(buffer);
+            if (message.command_type == CommandType::HelpCommand)
+            {
+                if (message.args.size() == 0)
+                {
+                    text += command_list;
+                    text += "\n";
+                }
+            }
             if (message.command_type == CommandType::ListLobbies)
             {
                 if (message.args.size() == 0)
@@ -254,10 +329,37 @@ void talk_to_client(int client_fd, Manager &manager)
             else if (message.command_type == CommandType::JoinLobby)
             {
                 std::cout << "JoinLobby\n";
+                if (message.args.size() == 1)
+                {
+                    manager.leave_lobby(userId);
+                    std::string strLobbyId = message.args[0];
+                    int lobbyId = parse_string_int(strLobbyId);
+                    int joinSuccessful = manager.add_member_to_lobby(userId, lobbyId);
+                    if (joinSuccessful)
+                    {
+                        text += "Joined the lobby with the name: " + manager.get_lobby_name(lobbyId) + "\n";
+                    }
+                    else
+                    {
+                        text += "Lobby not found\n";
+                    }
+                }
             }
             else if (message.command_type == CommandType::LeaveLobby)
             {
                 std::cout << "LeaveLobby\n";
+                if (message.args.size() == 0)
+                {
+                    int ok = manager.leave_lobby(userId);
+                    if (ok)
+                    {
+                        text += "Successfully left the lobby!\n";
+                    }
+                    else
+                    {
+                        text += "Nothing left to do.\n";
+                    }
+                }
             }
             else if (message.command_type == CommandType::PrivateMessage)
             {
@@ -265,6 +367,7 @@ void talk_to_client(int client_fd, Manager &manager)
                 {
                     std::string userIdStr = message.args[0];
                     int userId = parse_string_int(userIdStr);
+                    std::string textMessage = message.args[1];
                 }
             }
             text += ">";
