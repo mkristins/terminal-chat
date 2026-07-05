@@ -12,7 +12,11 @@ namespace duo
 
         SendUsername,
         AckUsername,
-        ErrUsername
+        ErrUsername,
+
+        CreateLobby,
+        AckCreateLobby,
+        ErrCreateLobby,
     };
 
     std::string type_string(MessageType type);

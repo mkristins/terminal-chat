@@ -8,6 +8,7 @@ class Command for handling messages and commands
 
 void Command::initialize(std::string str)
 {
+    command_type = CommandType::Unknown;
     std::string current_argument;
     for (char cur_char : str)
     {
@@ -94,8 +95,6 @@ Command::Command(std::string str)
 
 Command::Command(char buffer[])
 {
-    command_type = CommandType::Unknown;
-    std::string current_argument;
     std::string filtered_str = "";
     for (int i = 0; i < 1024; i++)
     {

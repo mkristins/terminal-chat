@@ -128,10 +128,9 @@ int main(int argc, char *argv[])
             std::getline(std::cin, content);
 
             Command command(content);
-            std::cout << command.command_type << "\n";
             if (command.command_type == CommandType::Message)
             {
-            }
+                        }
             else if (command.command_type == CommandType::Unknown)
             {
             }
