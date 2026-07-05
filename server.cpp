@@ -11,6 +11,7 @@
 #include <mutex>
 #include <algorithm>
 #include "message.h"
+#include "duo.h"
 
 #define MEMBER_LIMIT 100
 
@@ -275,8 +276,15 @@ int parse_string_int(std::string str)
 
 void talk_to_client(int client_fd, Manager &manager)
 {
+    std::cout << "Manage client communication!\n";
     char buffer[1024];
-    send(client_fd, opening.c_str(), opening.size(), 0);
+    // send(client_fd, opening.c_str(), opening.size(), 0);
+    // std::cout << "Sent this string: " << opening << "\n";
+
+    duo::duo_message conn_message{duo::MessageType::Connected, ""};
+    std::string conn_message_str = conn_message.dump();
+    send(client_fd, conn_message_str.c_str(), conn_message_str.size(), 0);
+
     CommunicationState state = WaitUsername;
     std::string name;
     int userId = -1;
@@ -289,20 +297,26 @@ void talk_to_client(int client_fd, Manager &manager)
             std::cout << "Client gone\n";
             break;
         }
+
+        std::string client_message(buffer, bytes_received);
+        duo::duo_message recv_message = duo::deserialize(client_message);
+
         std::string text;
         if (state == WaitUsername)
         {
-            text = "Hi, ";
-            for (int x = 0; x < 1024; x++)
+            if (recv_message.get_type() == duo::MessageType::SendUsername)
             {
-                if (buffer[x] == '\0' || buffer[x] == '\n')
-                    break;
-                name += buffer[x];
+                std::string username = recv_message.get_content();
+                duo::duo_message ack_message(duo::MessageType::AckUsername, "");
+                std::string ack_message_str = ack_message.dump();
+                send(client_fd, ack_message_str.c_str(), ack_message_str.size(), 0);
+                state = WaitMessage;
+                continue;
             }
-            name = sanitize_string(name);
-            userId = manager.add_new_member(name.c_str(), client_fd);
-            text += name + "\n" + ">";
-            state = WaitMessage;
+            else
+            {
+                continue;
+            }
         }
         else
         {
@@ -388,6 +402,8 @@ void talk_to_client(int client_fd, Manager &manager)
             }
             text += ">";
         }
+        std::cout << "The sent text: \n";
+        std::cout << text << "\n";
         send(client_fd, text.c_str(), text.size(), 0);
     }
     close(client_fd);
