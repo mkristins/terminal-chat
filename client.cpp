@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cstring>
 #include <vector>
+#include <limits>
 
 #include "duo.h"
 
@@ -70,7 +71,6 @@ int main(int argc, char *argv[])
     }
     int conn_fd = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
     connect(conn_fd, result->ai_addr, result->ai_addrlen);
-    std::cout << "one single attempt?\n";
     bool connection_open = true;
 
     char buffer[1024];
@@ -117,12 +117,15 @@ int main(int argc, char *argv[])
                 ack_username = true;
             }
         }
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         std::cout << "Welcome to the TerminalChat, " << colors[4] << username << color_escape << "!" << std::endl;
+
         while (true)
         {
             std::cout << ">";
             std::string content;
             std::getline(std::cin, content);
+            std::cout << "echo <" << content << "\n";
         }
     }
     else
