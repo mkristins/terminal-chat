@@ -126,7 +126,18 @@ int main(int argc, char *argv[])
             std::cout << ">";
             std::string content;
             std::getline(std::cin, content);
-            std::cout << "echo <" << content << "\n";
+
+            Command command(content);
+            std::cout << command.command_type << "\n";
+            if (command.command_type == CommandType::Message)
+            {
+            }
+            else if (command.command_type == CommandType::Unknown)
+            {
+            }
+            else if (command.command_type == CommandType::HelpCommand)
+            {
+            }
         }
     }
     else

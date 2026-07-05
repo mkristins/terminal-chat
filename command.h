@@ -26,8 +26,11 @@ enum CommandType
 
 class Command
 {
+    void initialize(std::string str);
+
 public:
     CommandType command_type;
     std::vector<std::string> args;
     Command(char buffer[]);
+    Command(std::string str);
 };

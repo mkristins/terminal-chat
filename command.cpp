@@ -6,31 +6,28 @@
 class Command for handling messages and commands
 */
 
-Command::Command(char buffer[])
+void Command::initialize(std::string str)
 {
-    command_type = CommandType::Unknown;
     std::string current_argument;
-    for (int i = 0; i < 1024; i++)
+    for (char cur_char : str)
     {
-        if (buffer[i] == '\0' || buffer[i] == '\n' || buffer[i] == '\r')
-            break;
         if (command_type == CommandType::Unknown)
         {
-            if (buffer[i] == ' ')
+            if (cur_char == ' ')
                 continue;
-            if (buffer[i] == '/')
+            if (cur_char == '/')
             {
                 command_type = CommandType::Unknown;
             }
             else
             {
                 command_type = CommandType::Message;
-                current_argument += buffer[i];
+                current_argument += cur_char;
             }
         }
         else if (command_type == CommandType::Unknown)
         {
-            if (buffer[i] == ' ')
+            if (cur_char == ' ')
             {
                 if (!current_argument.empty())
                 {
@@ -40,12 +37,12 @@ Command::Command(char buffer[])
             }
             else
             {
-                current_argument += buffer[i];
+                current_argument += cur_char;
             }
         }
         else
         {
-            current_argument += buffer[i];
+            current_argument += cur_char;
         }
     }
     if (!current_argument.empty())
@@ -88,4 +85,23 @@ Command::Command(char buffer[])
             args.erase(args.begin());
         }
     }
+}
+
+Command::Command(std::string str)
+{
+    initialize(str);
+}
+
+Command::Command(char buffer[])
+{
+    command_type = CommandType::Unknown;
+    std::string current_argument;
+    std::string filtered_str = "";
+    for (int i = 0; i < 1024; i++)
+    {
+        if (buffer[i] == '\0' || buffer[i] == '\n' || buffer[i] == '\r')
+            break;
+        filtered_str += buffer[i];
+    }
+    initialize(filtered_str);
 }
