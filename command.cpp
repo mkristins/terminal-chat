@@ -1,15 +1,12 @@
-#include "message.h"
+#include "command.h"
 #include <iostream>
 
 /*
 
-class Message for handling TCP/UDP messages.
-
-The messages are in format <MESSAGE_TYPE>|<MESSAGE_CONTENT>
-
+class Command for handling messages and commands
 */
 
-Message::Message(char buffer[])
+Command::Command(char buffer[])
 {
     command_type = CommandType::Unknown;
     std::string current_argument;
@@ -23,15 +20,15 @@ Message::Message(char buffer[])
                 continue;
             if (buffer[i] == '/')
             {
-                command_type = CommandType::UnknownCommand;
+                command_type = CommandType::Unknown;
             }
             else
             {
-                command_type = CommandType::TextMessage;
+                command_type = CommandType::Message;
                 current_argument += buffer[i];
             }
         }
-        else if (command_type == CommandType::UnknownCommand)
+        else if (command_type == CommandType::Unknown)
         {
             if (buffer[i] == ' ')
             {
@@ -55,7 +52,7 @@ Message::Message(char buffer[])
     {
         args.emplace_back(current_argument);
     }
-    if (command_type == CommandType::UnknownCommand)
+    if (command_type == CommandType::Unknown)
     {
         if (!args.empty())
         {

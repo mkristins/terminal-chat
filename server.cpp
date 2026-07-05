@@ -10,15 +10,10 @@
 #include <thread>
 #include <mutex>
 #include <algorithm>
-#include "message.h"
+#include "command.h"
 #include "duo.h"
 
 #define MEMBER_LIMIT 100
-
-enum ErrorCode
-{
-    Ok
-};
 
 std::string to_str(int x)
 {
@@ -320,7 +315,7 @@ void talk_to_client(int client_fd, Manager &manager)
         }
         else
         {
-            Message message(buffer);
+            Command message(buffer);
             if (message.command_type == CommandType::HelpCommand)
             {
                 if (message.args.size() == 0)

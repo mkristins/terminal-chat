@@ -19,16 +19,15 @@ enum CommandType
     JoinLobby,
     LeaveLobby,
     PrivateMessage,
-    TextMessage,
     QuitCommand,
-    Unknown,
-    UnknownCommand
+    Message,
+    Unknown
 };
 
-class Message
+class Command
 {
 public:
     CommandType command_type;
     std::vector<std::string> args;
-    Message(char buffer[]);
+    Command(char buffer[]);
 };

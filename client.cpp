@@ -11,6 +11,7 @@
 #include <limits>
 
 #include "duo.h"
+#include "command.h"
 
 const std::string welcome_message =
     R"(Welcome to TerminalChat!
