@@ -3,13 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
-/*
 
-class Message for handling TCP/UDP messages.
-
-The messages are in format <MESSAGE_TYPE>|<MESSAGE_CONTENT>
-
-*/
 enum CommandType
 {
     HelpCommand,
@@ -21,7 +15,8 @@ enum CommandType
     PrivateMessage,
     QuitCommand,
     Message,
-    Unknown
+    Unknown,
+    UnknownCommand
 };
 
 class Command

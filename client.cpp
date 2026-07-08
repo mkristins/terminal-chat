@@ -16,13 +16,25 @@
 const std::string welcome_message =
     R"(Welcome to TerminalChat!
 Commands:
-  /help             Show available commands
-  /list             List all lobbies
-  /users            List all users
-  /create [name]    Create a lobby
-  /join [lobbyCode] Join a lobby
-  /leave            Leave the current lobby
-  /pm [userId]      Private message an user
+  /help                   Show available commands
+  /list                   List all lobbies
+  /users                  List all users
+  /create [name]          Create a lobby
+  /join [lobbyId]         Join a lobby
+  /leave                  Leave the current lobby
+  /pm [userId] [message]  Private message an user
+  /quit                   Leave the application (gracefully)
+)";
+
+const std::string help_string = R"(Command list:
+  /help                   Show available commands
+  /list                   List all lobbies
+  /users                  List all users
+  /create [name]          Create a lobby
+  /join [lobbyId]         Join a lobby
+  /leave                  Leave the current lobby
+  /pm [userId] [message]  Private message an user
+  /quit                   Leave the application (gracefully)
 )";
 
 std::string colors[] = {
@@ -37,6 +49,14 @@ std::string colors[] = {
 };
 
 std::string color_escape = "\033[0m";
+
+void sending_messages()
+{
+}
+
+void reading_messages()
+{
+}
 
 int main(int argc, char *argv[])
 {
@@ -128,14 +148,96 @@ int main(int argc, char *argv[])
             std::getline(std::cin, content);
 
             Command command(content);
-            if (command.command_type == CommandType::Message)
+
+            switch (command.command_type)
             {
-                        }
-            else if (command.command_type == CommandType::Unknown)
+            case CommandType::Message:
             {
+                std::cout << "Send a message in the current lobby\n";
+                break;
             }
-            else if (command.command_type == CommandType::HelpCommand)
+            case CommandType::HelpCommand:
             {
+                std::cout << colors[4] << help_string << color_escape << std::endl;
+                break;
+            }
+
+            case CommandType::ListLobbies:
+            {
+                duo::duo_message list_lobbies(duo::MessageType::ListLobbies, "");
+                std::string list_lobbies_str = list_lobbies.dump();
+                send(conn_fd, list_lobbies_str.c_str(), list_lobbies_str.size(), 0);
+                break;
+            }
+            case CommandType::ListUsers:
+            {
+                duo::duo_message list_users(duo::MessageType::ListUsers, "");
+                std::string list_users_str = list_users.dump();
+                send(conn_fd, list_users_str.c_str(), list_users_str.size(), 0);
+                break;
+            }
+            case CommandType::CreateLobby:
+            {
+
+                std::string lobby_name = "";
+                for (size_t i = 0; i < command.args.size(); i++)
+                {
+                    if (i > 0)
+                    {
+                        lobby_name += " ";
+                    }
+                    lobby_name += command.args[i];
+                }
+                duo::duo_message create_lobby(duo::MessageType::CreateLobby, lobby_name);
+                std::string create_lobby_str = create_lobby.dump();
+                send(conn_fd, create_lobby_str.c_str(), create_lobby_str.size(), 0);
+                break;
+            }
+            case CommandType::JoinLobby:
+            {
+                if (command.args.size() == 1)
+                {
+                    std::string code = command.args[0];
+                    duo::duo_message join_lobby(duo::MessageType::JoinLobby, code);
+                    std::string join_lobby_str = join_lobby.dump();
+                    send(conn_fd, join_lobby_str.c_str(), join_lobby_str.size(), 0);
+                    break;
+                }
+                break;
+            }
+            case CommandType::PrivateMessage:
+            {
+                if (command.args.size() >= 2)
+                {
+                    std::string code = command.args[0];
+                    std::string message = "";
+                    for (size_t i = 1; i < command.args.size(); i++)
+                    {
+                        message += command.args[i];
+                        message += " ";
+                    }
+                    std::string content = code + "##" + message;
+                    duo::duo_message private_message(duo::MessageType::SendPrivateMessage, content);
+                    std::string private_message_str = private_message.dump();
+                    send(conn_fd, private_message_str.c_str(), private_message_str.size(), 0);
+                    break;
+                }
+                break;
+            }
+            case CommandType::LeaveLobby:
+            {
+                duo::duo_message leave_lobby(duo::MessageType::LeaveLobby, "");
+                std::string leave_lobby_str = leave_lobby.dump();
+
+                send(conn_fd, leave_lobby_str.c_str(), leave_lobby_str.size(), 0);
+                break;
+            }
+            case CommandType::QuitCommand:
+            {
+                return 0; // issue = early return
+            }
+            default:
+                break;
             }
         }
     }

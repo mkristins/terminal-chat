@@ -14,9 +14,18 @@ namespace duo
         AckUsername,
         ErrUsername,
 
+        ListLobbies,
+        ListUsers,
+
         CreateLobby,
-        AckCreateLobby,
-        ErrCreateLobby,
+        JoinLobby,
+        LeaveLobby,
+
+        SendMessage,
+        RecvMessage,
+
+        SendPrivateMessage,
+        RecvPrivateMessage
     };
 
     std::string type_string(MessageType type);

@@ -18,7 +18,7 @@ void Command::initialize(std::string str)
                 continue;
             if (cur_char == '/')
             {
-                command_type = CommandType::Unknown;
+                command_type = CommandType::UnknownCommand;
             }
             else
             {
@@ -26,7 +26,7 @@ void Command::initialize(std::string str)
                 current_argument += cur_char;
             }
         }
-        else if (command_type == CommandType::Unknown)
+        else if (command_type == CommandType::UnknownCommand)
         {
             if (cur_char == ' ')
             {
@@ -50,7 +50,7 @@ void Command::initialize(std::string str)
     {
         args.emplace_back(current_argument);
     }
-    if (command_type == CommandType::Unknown)
+    if (command_type == CommandType::UnknownCommand)
     {
         if (!args.empty())
         {
@@ -81,6 +81,10 @@ void Command::initialize(std::string str)
             else if (args[0] == "pm")
             {
                 command_type = CommandType::PrivateMessage;
+            }
+            else if (args[0] == "quit")
+            {
+                command_type = CommandType::QuitCommand;
             }
 
             args.erase(args.begin());
