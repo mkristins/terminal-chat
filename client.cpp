@@ -9,6 +9,7 @@
 #include <cstring>
 #include <vector>
 #include <limits>
+#include <thread>
 
 #include "duo.h"
 #include "command.h"
@@ -50,12 +51,13 @@ std::string colors[] = {
 
 std::string color_escape = "\033[0m";
 
-void sending_messages()
+void reading_messages(int conn_fd)
 {
-}
-
-void reading_messages()
-{
+    while (true)
+    {
+        char buffer[1024];
+        int bytes_received = recv(conn_fd, buffer, sizeof(buffer), 0);
+    }
 }
 
 int main(int argc, char *argv[])
@@ -141,6 +143,9 @@ int main(int argc, char *argv[])
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         std::cout << "Welcome to the TerminalChat, " << colors[4] << username << color_escape << "!" << std::endl;
 
+        std::thread t(reading_messages, conn_fd);
+        t.detach();
+
         while (true)
         {
             std::cout << ">";
@@ -153,7 +158,14 @@ int main(int argc, char *argv[])
             {
             case CommandType::Message:
             {
-                std::cout << "Send a message in the current lobby\n";
+                std::string message = "";
+                for (size_t i = 0; i < command.args.size(); i++)
+                {
+                    message += command.args[i];
+                }
+                duo::duo_message send_message(duo::MessageType::SendMessage, message);
+                std::string send_message_str = send_message.dump();
+                send(conn_fd, send_message_str.c_str(), send_message_str.size(), 0);
                 break;
             }
             case CommandType::HelpCommand:

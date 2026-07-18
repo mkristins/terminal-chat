@@ -82,7 +82,7 @@ public:
     {
     }
 
-    int add_new_member(const char *name, int socketFd)
+    int add_new_member(const std::string &name, int socketFd)
     {
         std::lock_guard<std::mutex> lock(mutex);
         int currentId = nextMemberId;
@@ -92,7 +92,7 @@ public:
         return currentId;
     }
 
-    int add_new_lobby(const char *name)
+    int add_new_lobby(const std::string &name)
     {
         std::lock_guard<std::mutex> lock(mutex);
         int currentId = nextLobbyId;
@@ -102,32 +102,30 @@ public:
         return currentId;
     }
 
-    std::string produce_lobby_list()
+    duo::duo_message produce_lobby_list()
     {
         std::lock_guard<std::mutex> lock(mutex);
+        std::string content;
         std::string lobby_list;
         for (auto &m : lobbyList)
         {
-            lobby_list += "# ";
-            lobby_list += m.name;
-            lobby_list += "(" + to_str(m.id) + ")";
-            lobby_list += " " + to_str(m.memberIds.size()) + "/" + to_str(m.capacity);
-            lobby_list += "\n";
+            content += m.name;
+            content += "(" + to_str(m.id) + ")";
+            content += "&&";
         }
-        return lobby_list;
+        return duo::duo_message(duo::MessageType::ListLobbies, content);
     }
 
-    std::string produce_user_list()
+    duo::duo_message produce_user_list()
     {
         std::lock_guard<std::mutex> lock(mutex);
-        std::string user_list;
+        std::string content;
         for (auto &m : memberList)
         {
-            std::string member_string = "= " + m.name + "#" + write_user_id(m.id) + "\n";
-            user_list += member_string;
+            std::string member_string = "= " + m.name + "#" + write_user_id(m.id) + "&&";
+            content += member_string;
         }
-        std::cout << user_list << "?\n";
-        return user_list;
+        return duo::duo_message(duo::MessageType::ListUsers, content);
     }
 
     int add_member_to_lobby(int memberId, int lobbyId)
@@ -157,9 +155,10 @@ public:
 
     int leave_lobby(int memberId)
     {
+        std::lock_guard<std::mutex> lock(mutex);
         for (auto &m : memberList)
         {
-            if (m.lobbyId != -1)
+            if (m.id == memberId)
             {
                 for (auto &l : lobbyList)
                 {
@@ -189,6 +188,7 @@ public:
 
     std::string get_lobby_name(int lobbyId)
     {
+        std::lock_guard<std::mutex> lock(mutex);
         for (auto &m : lobbyList)
         {
             if (m.id == lobbyId)
@@ -201,16 +201,47 @@ public:
 
     int send_message_to_user(int memberId, std::string message)
     {
+        std::lock_guard<std::mutex> lock(mutex);
         for (auto &m : memberList)
         {
             if (m.id == memberId)
             {
                 std::string new_message = "\n" + message + "\n>";
-                send(m.socketFd, message.c_str(), message.size(), 0);
+                duo::duo_message private_message(duo::SendPrivateMessage, message);
+                std::string private_message_dump = private_message.dump();
+                send(m.socketFd, private_message_dump.c_str(), private_message_dump.size(), 0);
                 return 1;
             }
         }
         return 0;
+    }
+
+    void send_message_in_lobby(int memberId, std::string message)
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        std::cout << "length: " << memberList.size() << "\n";
+        for (auto &m : memberList)
+        {
+            std::cout << "Name: " << m.name << " Lobby: " << m.lobbyId << " " << "(" << m.id << ")\n";
+        }
+        for (auto &m : memberList)
+        {
+            if (m.id == memberId)
+            {
+                if (m.lobbyId == -1)
+                    return;
+                duo::duo_message server_message(duo::SendMessage, message);
+                for (auto mi : memberList)
+                {
+                    if (mi.id != memberId && mi.lobbyId == m.lobbyId)
+                    {
+                        std::string server_message_send = server_message.dump();
+                        send(mi.socketFd, server_message_send.c_str(), server_message_send.size(), 0);
+                    }
+                }
+                break;
+            }
+        }
     }
 };
 
@@ -297,109 +328,73 @@ void talk_to_client(int client_fd, Manager &manager)
         duo::duo_message recv_message = duo::deserialize(client_message);
 
         std::string text;
+        duo::MessageType messageType = recv_message.get_type();
+        std::string content = recv_message.get_content();
         if (state == WaitUsername)
         {
-            if (recv_message.get_type() == duo::MessageType::SendUsername)
+            if (messageType == duo::MessageType::SendUsername)
             {
                 std::string username = recv_message.get_content();
                 duo::duo_message ack_message(duo::MessageType::AckUsername, "");
                 std::string ack_message_str = ack_message.dump();
+                userId = manager.add_new_member(username, client_fd);
                 send(client_fd, ack_message_str.c_str(), ack_message_str.size(), 0);
                 state = WaitMessage;
-                continue;
             }
-            else
-            {
-                continue;
-            }
+            continue;
         }
         else
         {
-            Command message(buffer);
-            if (message.command_type == CommandType::HelpCommand)
+            duo::duo_message outgoingMessage;
+            switch (messageType)
             {
-                if (message.args.size() == 0)
-                {
-                    text += command_list;
-                    text += "\n";
-                }
-            }
-            if (message.command_type == CommandType::ListLobbies)
+            case duo::MessageType::SendMessage:
             {
-                if (message.args.size() == 0)
-                {
-                    text += manager.produce_lobby_list();
-                }
+                std::cout << "Send ... out the message!\n";
+                manager.send_message_in_lobby(userId, content);
+                break;
             }
-            else if (message.command_type == CommandType::ListUsers)
+            case duo::MessageType::SendPrivateMessage:
             {
-                if (message.args.size() == 0)
-                {
-                    text += manager.produce_user_list();
-                }
+                // manager.send_message_to_user();
+                break;
             }
-            else if (message.command_type == CommandType::CreateLobby)
+            case duo::MessageType::JoinLobby:
             {
-                if (message.args.size() == 1)
-                {
-                    std::string name = message.args[0];
-                    int lobbyId = manager.add_new_lobby(name.c_str());
-                    manager.add_member_to_lobby(userId, lobbyId);
-                    text += "Created a new lobby with name: " + name + "\n";
-                    text += "Others can join this lobby with a code: " + to_str(lobbyId) + "\n";
-                }
+                manager.leave_lobby(userId);
+                int lobbyId = parse_string_int(content);
+                int joinSuccessful = manager.add_member_to_lobby(userId, lobbyId);
+                outgoingMessage = duo::duo_message(duo::MessageType::JoinLobby, "");
+                break;
             }
-            else if (message.command_type == CommandType::JoinLobby)
+            case duo::MessageType::CreateLobby:
             {
-                std::cout << "JoinLobby\n";
-                if (message.args.size() == 1)
-                {
-                    manager.leave_lobby(userId);
-                    std::string strLobbyId = message.args[0];
-                    int lobbyId = parse_string_int(strLobbyId);
-                    int joinSuccessful = manager.add_member_to_lobby(userId, lobbyId);
-                    if (joinSuccessful)
-                    {
-                        text += "Joined the lobby with the name: " + manager.get_lobby_name(lobbyId) + "\n";
-                    }
-                    else
-                    {
-                        text += "Lobby not found\n";
-                    }
-                }
+                int lobbyId = manager.add_new_lobby(content);
+                std::cout << userId << " ?? " << lobbyId << "\n";
+                manager.add_member_to_lobby(userId, lobbyId);
+                outgoingMessage = duo::duo_message(duo::MessageType::CreateLobby, to_str(lobbyId));
+                break;
             }
-            else if (message.command_type == CommandType::LeaveLobby)
+            case duo::MessageType::LeaveLobby:
             {
-                std::cout << "LeaveLobby\n";
-                if (message.args.size() == 0)
-                {
-                    int ok = manager.leave_lobby(userId);
-                    if (ok)
-                    {
-                        text += "Successfully left the lobby!\n";
-                    }
-                    else
-                    {
-                        text += "Nothing left to do.\n";
-                    }
-                }
+                manager.leave_lobby(userId);
+                outgoingMessage = duo::duo_message(duo::MessageType::LeaveLobby, "");
+                break;
             }
-            else if (message.command_type == CommandType::PrivateMessage)
+            case duo::MessageType::ListLobbies:
             {
-                std::cout << "Private Message\n";
-                if (message.args.size() == 2)
-                {
-                    std::string userIdStr = message.args[0];
-                    int targetUser = parse_string_int(userIdStr);
-                    std::string textMessage = message.args[1];
-                    manager.send_message_to_user(targetUser, textMessage);
-                }
+                outgoingMessage = manager.produce_lobby_list();
+                break;
             }
-            text += ">";
+            case duo::MessageType::ListUsers:
+            {
+                outgoingMessage = manager.produce_user_list();
+                break;
+            }
+            }
+            std::string outgoingMessageStr = outgoingMessage.dump();
+            send(client_fd, outgoingMessageStr.c_str(), outgoingMessageStr.size(), 0);
         }
-        std::cout << "The sent text: \n";
-        std::cout << text << "\n";
-        send(client_fd, text.c_str(), text.size(), 0);
     }
     close(client_fd);
 }

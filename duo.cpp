@@ -17,6 +17,24 @@ namespace duo
             return "AckUsername";
         case MessageType::ErrUsername:
             return "ErrUsername";
+        case MessageType::ListLobbies:
+            return "ListLobbies";
+        case MessageType::ListUsers:
+            return "ListUsers";
+        case MessageType::CreateLobby:
+            return "CreateLobby";
+        case MessageType::JoinLobby:
+            return "JoinLobby";
+        case MessageType::LeaveLobby:
+            return "LeaveLobby";
+        case MessageType::SendMessage:
+            return "SendMessage";
+        case MessageType::RecvMessage:
+            return "RecvMessage";
+        case MessageType::SendPrivateMessage:
+            return "SendPrivateMessage";
+        case MessageType::RecvPrivateMessage:
+            return "RecvPrivateMessage";
         }
         throw std::invalid_argument("Unknown MessageType");
     }
@@ -43,7 +61,42 @@ namespace duo
         {
             return MessageType::ErrUsername;
         }
-
+        else if (body == "ListLobbies")
+        {
+            return MessageType::ListLobbies;
+        }
+        else if (body == "ListUsers")
+        {
+            return MessageType::ListUsers;
+        }
+        else if (body == "CreateLobby")
+        {
+            return MessageType::CreateLobby;
+        }
+        else if (body == "JoinLobby")
+        {
+            return MessageType::JoinLobby;
+        }
+        else if (body == "LeaveLobby")
+        {
+            return MessageType::LeaveLobby;
+        }
+        else if (body == "SendMessage")
+        {
+            return MessageType::SendMessage;
+        }
+        else if (body == "RecvMessage")
+        {
+            return MessageType::RecvMessage;
+        }
+        else if (body == "SendPrivateMessage")
+        {
+            return MessageType::SendPrivateMessage;
+        }
+        else if (body == "RecvPrivateMessage")
+        {
+            return MessageType::RecvPrivateMessage;
+        }
         throw std::invalid_argument("Unrecognizable type");
     }
 
